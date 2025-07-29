@@ -1,0 +1,16 @@
+{
+  "name": "morse-backend",
+  "version": "1.0.0",
+  "description": "WebSocket server for real-time morse code visualization",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "keywords": ["morse", "websocket", "realtime"],
+  "author": "",
+  "license": "MIT"
+}
