@@ -18,12 +18,105 @@ class MorseCodeVisualizer {
         this.spacePressed = false;
         this.lastFrameTime = 0;
         
+        // Audio setup
+        this.audioContext = null;
+        this.masterGain = null;
+        this.userOscillators = new Map();
+        this.baseFrequency = 440; // A4
+        this.frequencies = [440, 523, 659, 784, 880, 1047, 1319]; // A4, C5, E5, G5, A5, C6, E6
+        
+        this.setupAudio();
         this.setupCanvas();
         this.setupWebSocket();
         this.setupEventListeners();
         this.startAnimation();
     }
     
+    setupAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.audioContext.createGain();
+            this.masterGain.gain.value = 0.1; // Master volume
+            this.masterGain.connect(this.audioContext.destination);
+            
+            // Show audio prompt if context is suspended
+            if (this.audioContext.state === 'suspended') {
+                document.getElementById('audioPrompt').style.display = 'block';
+                
+                // Enable audio on first user interaction
+                const enableAudio = () => {
+                    this.audioContext.resume().then(() => {
+                        document.getElementById('audioPrompt').style.display = 'none';
+                    });
+                    document.removeEventListener('click', enableAudio);
+                    document.removeEventListener('keydown', enableAudio);
+                };
+                
+                document.addEventListener('click', enableAudio);
+                document.addEventListener('keydown', enableAudio);
+            }
+        } catch (error) {
+            console.warn('Web Audio API not supported:', error);
+        }
+    }
+    
+    getUserFrequency(userId) {
+        return this.frequencies[(userId - 1) % this.frequencies.length];
+    }
+    
+    startTone(userId) {
+        if (!this.audioContext || this.userOscillators.has(userId)) return;
+        
+        try {
+            // Resume audio context if suspended (required by some browsers)
+            if (this.audioContext.state === 'suspended') {
+                this.audioContext.resume();
+            }
+            
+            const oscillator = this.audioContext.createOscillator();
+            const gainNode = this.audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(this.getUserFrequency(userId), this.audioContext.currentTime);
+            
+            // Smooth attack to prevent clicking
+            gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.01);
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(this.masterGain);
+            
+            oscillator.start();
+            
+            this.userOscillators.set(userId, { oscillator, gainNode });
+        } catch (error) {
+            console.warn('Error starting tone:', error);
+        }
+    }
+    
+    stopTone(userId) {
+        if (!this.audioContext || !this.userOscillators.has(userId)) return;
+        
+        try {
+            const { oscillator, gainNode } = this.userOscillators.get(userId);
+            
+            // Smooth release to prevent clicking
+            gainNode.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 0.01);
+            
+            setTimeout(() => {
+                try {
+                    oscillator.stop();
+                } catch (e) {
+                    // Oscillator might already be stopped
+                }
+            }, 20);
+            
+            this.userOscillators.delete(userId);
+        } catch (error) {
+            console.warn('Error stopping tone:', error);
+        }
+    }
+
     setupCanvas() {
         const resizeCanvas = () => {
             const rect = this.canvas.getBoundingClientRect();
@@ -76,7 +169,8 @@ class MorseCodeVisualizer {
                     signals: [],
                     currentState: false
                 });
-                this.userInfo.textContent = `You are User ${data.userId}`;
+                const frequency = this.getUserFrequency(data.userId);
+                this.userInfo.textContent = `You are User ${data.userId} (${frequency}Hz)`;
                 this.userInfo.style.color = data.color;
                 break;
                 
@@ -101,6 +195,13 @@ class MorseCodeVisualizer {
                         timestamp: data.timestamp,
                         localTime: this.currentTime
                     });
+                    
+                    // Play or stop tone based on signal state
+                    if (data.state) {
+                        this.startTone(data.userId);
+                    } else {
+                        this.stopTone(data.userId);
+                    }
                     
                     this.cleanOldSignals(user);
                 }
@@ -216,7 +317,8 @@ class MorseCodeVisualizer {
             
             this.ctx.fillStyle = user.color;
             this.ctx.font = '12px Courier New';
-            this.ctx.fillText(`User ${userId}`, 10, y - actualRowHeight / 2 - 5);
+            const frequency = this.getUserFrequency(userId);
+            this.ctx.fillText(`User ${userId} (${frequency}Hz)`, 10, y - actualRowHeight / 2 - 5);
             
             this.drawUserSignals(user, y - actualRowHeight / 2, actualRowHeight, width);
         });

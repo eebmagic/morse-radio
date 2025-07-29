@@ -9,10 +9,13 @@
 <body>
     <div class="header">
         <h1>Morse Code Experience</h1>
-        <p>Press and hold <kbd>SPACEBAR</kbd> to transmit morse code. Each user gets their own row.</p>
+        <p>Press and hold <kbd>SPACEBAR</kbd> to transmit morse code. Each user gets their own row and tone.</p>
         <div class="status">
             <span id="connectionStatus">Connecting...</span>
             <span id="userInfo"></span>
+        </div>
+        <div id="audioPrompt" style="background: #ff6b6b; padding: 10px; margin: 10px 0; border-radius: 5px; display: none;">
+            <p>Click anywhere to enable audio tones</p>
         </div>
     </div>
     
