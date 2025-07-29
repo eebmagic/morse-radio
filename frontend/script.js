@@ -7,6 +7,7 @@ class MorseCodeVisualizer {
         
         this.ws = null;
         this.userId = null;
+        this.userUuid = this.getOrCreateUserUuid();
         this.userColor = null;
         this.users = new Map();
         
@@ -31,6 +32,26 @@ class MorseCodeVisualizer {
         this.setupWebSocket();
         this.setupEventListeners();
         this.startAnimation();
+    }
+    
+    generateUuid() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = Math.random() * 16 | 0;
+            const v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+    
+    getOrCreateUserUuid() {
+        let uuid = localStorage.getItem('morseCodeUserUuid');
+        if (!uuid) {
+            uuid = this.generateUuid();
+            localStorage.setItem('morseCodeUserUuid', uuid);
+            console.log('Generated new user UUID:', uuid);
+        } else {
+            console.log('Using existing user UUID:', uuid);
+        }
+        return uuid;
     }
     
     setupAudio() {
@@ -141,6 +162,12 @@ class MorseCodeVisualizer {
         this.ws.onopen = () => {
             this.connectionStatus.textContent = 'Connected';
             this.connectionStatus.classList.add('connected');
+            
+            // Send UUID to identify this user
+            this.ws.send(JSON.stringify({
+                type: 'identify',
+                uuid: this.userUuid
+            }));
         };
         
         this.ws.onmessage = (event) => {
