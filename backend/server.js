@@ -56,6 +56,20 @@ wss.on('connection', (ws) => {
     color: userColor
   }));
 
+  // Send existing users to the new user
+  clients.forEach((client, existingUserId) => {
+    if (existingUserId !== userId) {
+      console.log(`Sending existing user ${existingUserId} to new user ${userId}`);
+      ws.send(JSON.stringify({
+        type: 'userJoined',
+        userId: existingUserId,
+        color: client.color
+      }));
+    }
+  });
+
+  // Notify other users about the new user
+  console.log(`Broadcasting new user ${userId} to ${clients.size - 1} existing users`);
   broadcast({
     type: 'userJoined',
     userId: userId,
