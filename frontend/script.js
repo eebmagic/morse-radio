@@ -16,6 +16,7 @@ class MorseCodeVisualizer {
         this.currentTime = 0;
         
         this.spacePressed = false;
+        this.mousePressed = false;
         this.lastFrameTime = 0;
         
         // Audio setup
@@ -214,22 +215,44 @@ class MorseCodeVisualizer {
         user.signals = user.signals.filter(signal => signal.localTime > cutoffTime);
     }
     
+    isSignalActive() {
+        return this.spacePressed || this.mousePressed;
+    }
+    
+    startMorseSignal() {
+        this.sendMorseSignal(true);
+        
+        if (this.users.has(this.userId)) {
+            const user = this.users.get(this.userId);
+            user.currentState = true;
+            user.signals.push({
+                state: true,
+                timestamp: Date.now(),
+                localTime: this.currentTime
+            });
+        }
+    }
+    
+    stopMorseSignal() {
+        this.sendMorseSignal(false);
+        
+        if (this.users.has(this.userId)) {
+            const user = this.users.get(this.userId);
+            user.currentState = false;
+            user.signals.push({
+                state: false,
+                timestamp: Date.now(),
+                localTime: this.currentTime
+            });
+        }
+    }
+
     setupEventListeners() {
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !this.spacePressed) {
+            if (e.code === 'Space' && !this.spacePressed && !this.mousePressed) {
                 e.preventDefault();
                 this.spacePressed = true;
-                this.sendMorseSignal(true);
-                
-                if (this.users.has(this.userId)) {
-                    const user = this.users.get(this.userId);
-                    user.currentState = true;
-                    user.signals.push({
-                        state: true,
-                        timestamp: Date.now(),
-                        localTime: this.currentTime
-                    });
-                }
+                this.startMorseSignal();
             }
         });
         
@@ -237,34 +260,56 @@ class MorseCodeVisualizer {
             if (e.code === 'Space' && this.spacePressed) {
                 e.preventDefault();
                 this.spacePressed = false;
-                this.sendMorseSignal(false);
-                
-                if (this.users.has(this.userId)) {
-                    const user = this.users.get(this.userId);
-                    user.currentState = false;
-                    user.signals.push({
-                        state: false,
-                        timestamp: Date.now(),
-                        localTime: this.currentTime
-                    });
-                }
+                this.stopMorseSignal();
             }
         });
         
+        // Mouse event listeners for canvas
+        this.canvas.addEventListener('mousedown', (e) => {
+            if (!this.mousePressed && !this.isSignalActive()) {
+                e.preventDefault();
+                this.mousePressed = true;
+                this.startMorseSignal();
+            }
+        });
+        
+        this.canvas.addEventListener('mouseup', (e) => {
+            if (this.mousePressed) {
+                e.preventDefault();
+                this.mousePressed = false;
+                this.stopMorseSignal();
+            }
+        });
+        
+        this.canvas.addEventListener('mouseleave', (e) => {
+            if (this.mousePressed) {
+                this.mousePressed = false;
+                this.stopMorseSignal();
+            }
+        });
+        
+        // Touch event listeners for mobile support
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (!this.mousePressed && !this.isSignalActive()) {
+                e.preventDefault();
+                this.mousePressed = true;
+                this.startMorseSignal();
+            }
+        });
+        
+        this.canvas.addEventListener('touchend', (e) => {
+            if (this.mousePressed) {
+                e.preventDefault();
+                this.mousePressed = false;
+                this.stopMorseSignal();
+            }
+        });
+
         window.addEventListener('blur', () => {
-            if (this.spacePressed) {
+            if (this.spacePressed || this.mousePressed) {
                 this.spacePressed = false;
-                this.sendMorseSignal(false);
-                
-                if (this.users.has(this.userId)) {
-                    const user = this.users.get(this.userId);
-                    user.currentState = false;
-                    user.signals.push({
-                        state: false,
-                        timestamp: Date.now(),
-                        localTime: this.currentTime
-                    });
-                }
+                this.mousePressed = false;
+                this.stopMorseSignal();
             }
         });
     }
