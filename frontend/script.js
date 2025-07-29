@@ -31,6 +31,7 @@ class MorseCodeVisualizer {
         this.setupCanvas();
         this.setupWebSocket();
         this.setupEventListeners();
+        this.setupSpeedControl();
         this.startAnimation();
     }
     
@@ -339,6 +340,19 @@ class MorseCodeVisualizer {
                 this.stopMorseSignal();
             }
         });
+    }
+    
+    setupSpeedControl() {
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        
+        speedSlider.addEventListener('input', (e) => {
+            this.timeScale = parseInt(e.target.value);
+            speedValue.textContent = `${this.timeScale}px/s`;
+        });
+        
+        // Initialize display
+        speedValue.textContent = `${this.timeScale}px/s`;
     }
     
     sendMorseSignal(state) {
