@@ -89,6 +89,18 @@ kbd {
     font-size: 1em;
 }
 
+.instructions a {
+    color: #4ecdc4;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+.instructions a:hover {
+    color: #00ff41;
+    text-decoration: underline;
+}
+
 @media (max-width: 768px) {
     .header h1 {
         font-size: 2em;
